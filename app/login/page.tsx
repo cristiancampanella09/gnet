@@ -82,7 +82,7 @@ export default function LoginPage() {
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder="Inserisci la password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
