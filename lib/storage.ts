@@ -1,23 +1,42 @@
 const SIGNERS_KEY = "gnet_signers";
 const PASSWORD_KEY = "gnet_password";
 
-const DEFAULT_PASSWORD_HASH = "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi";
+// Sostituisci con l'hash generato per "Cristian@2009"
+const DEFAULT_PASSWORD_HASH = "$2a$10$e9ZxH8XQYjK3N5V7W2L9X.s3fJ2kL5mN8oP7qR4sT6uVwXyZ1A2B3C4D5E6"; 
 
 export function getSigners(): string[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(SIGNERS_KEY);
-  return data ? JSON.parse(data) : ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+  if (typeof window === "undefined") return ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+  try {
+    const data = localStorage.getItem(SIGNERS_KEY);
+    return data ? JSON.parse(data) : ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+  } catch {
+    return ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+  }
 }
 
 export function saveSigners(signers: string[]): void {
-  localStorage.setItem(SIGNERS_KEY, JSON.stringify(signers));
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SIGNERS_KEY, JSON.stringify(signers));
+  } catch (error) {
+    console.error("Errore salvataggio firmatari:", error);
+  }
 }
 
-export function getStoredHash(): string {
-  if (typeof window === "undefined") return DEFAULT_PASSWORD_HASH;
-  return localStorage.getItem(PASSWORD_KEY) || DEFAULT_PASSWORD_HASH;
+export function getStoredHash(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(PASSWORD_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function savePasswordHash(hash: string): void {
-  localStorage.setItem(PASSWORD_KEY, hash);
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PASSWORD_KEY, hash);
+  } catch (error) {
+    console.error("Errore salvataggio password:", error);
+  }
 }
