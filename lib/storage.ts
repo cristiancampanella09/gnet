@@ -1,3 +1,5 @@
+// Aggiungi all'inizio del file
+console.log('🔄 VERSIONE APP: 2.0.0 (simulazione aggiornamento)');
 const SIGNERS_KEY = "gnet_signers";
 const PASSWORD_KEY = "gnet_password";
 
