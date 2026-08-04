@@ -15,7 +15,6 @@ export interface Assignments {
 
 export type RoleKey = keyof Assignments;
 
-// Ordine di visualizzazione delle categorie (upload + anteprima)
 export const ROLE_ORDER: RoleKey[] = [
   "ufficiale",
   "infermeria",
@@ -39,14 +38,9 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   capo1_br: "Capo Guardia 1ª Muta BR",
   capo2_br: "Capo Guardia 2ª Muta BR",
   mensa: "Mensa",
-  ispezione_br: "Ispezione BR",
+  ispezione_br: "Ispezione Porto Athos",
 };
 
-/**
- * Costruisce l'oggetto Assignments a partire dalla persona già estratta
- * per ciascuna categoria (ora arriva da un file Excel dedicato per ruolo,
- * non più da un unico file con l'ordine delle righe a determinare il ruolo).
- */
 export function buildAssignments(
   rolePeople: Partial<Record<RoleKey, Person | null>>
 ): Assignments {

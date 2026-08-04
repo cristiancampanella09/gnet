@@ -5,8 +5,12 @@ export interface Person {
   cat: string;
   cognome: string;
   nome: string;
+  servizio: string;
+  grcgnnm: string;
+  ente: string;
   cell: string;
   tel_uff: string;
+  email: string;
 }
 
 export interface GuardStats {
@@ -23,11 +27,6 @@ const MESI_IT: Record<number, string> = {
   9: "settembre", 10: "ottobre", 11: "novembre", 12: "dicembre",
 };
 
-function dateToExcelSerial(dateStr: string): number {
-  const date = new Date(dateStr + "T00:00:00Z");
-  return Math.floor(date.getTime() / 86400000) + 25569;
-}
-
 function findSheet(workbook: XLSX.WorkBook, month: number): XLSX.WorkSheet {
   const nomeMese = MESI_IT[month];
   const found = workbook.SheetNames.find((n) => n.trim().toLowerCase() === nomeMese);
@@ -40,23 +39,17 @@ function findHeaderRow(rows: unknown[][]): number {
     const row = rows[i];
     if (!row) continue;
     const str = row.map((cell) => String(cell ?? "").toLowerCase()).join(" ");
-    if (str.includes("cognome") || str.includes("nome")) return i;
+    // Cerchiamo "grado" o "cognome" nell'intestazione
+    if (str.includes("grado") || str.includes("cognome")) return i;
   }
   return -1;
 }
 
-function findDateColumnIndex(rows: unknown[][], headerIdx: number, dateStr: string): number {
-  const targetDay = parseInt(dateStr.split("-")[2], 10);
-  const targetSerial = dateToExcelSerial(dateStr);
-
-  if (headerIdx >= 0) {
-    const hRow = rows[headerIdx];
-    for (let c = 0; c < hRow.length; c++) {
-      const val = hRow[c];
-      if (val === targetDay || val === String(targetDay) || val === targetSerial) return c;
-    }
-  }
-  return 7 + (targetDay - 1);
+function findDateColumnIndex(dateStr: string): number {
+  const day = parseInt(dateStr.split("-")[2], 10);
+  // Colonna L = indice 11 = 1° del mese
+  // Quindi: indice = 10 + giorno
+  return 10 + day;
 }
 
 export async function readPersonForRole(file: File, dateStr: string): Promise<Person | null> {
@@ -73,33 +66,61 @@ export async function readPersonForRole(file: File, dateStr: string): Promise<Pe
         const headerIdx = findHeaderRow(rows);
         if (headerIdx === -1) { resolve(null); return; }
 
-        const dateColIdx = findDateColumnIndex(rows, headerIdx, dateStr);
-        const people: Person[] = [];
+        const dateColIdx = findDateColumnIndex(dateStr);
+        
+        // Verifica che la colonna esista
+        if (dateColIdx >= rows[headerIdx]?.length) {
+          resolve(null);
+          return;
+        }
 
         for (let r = headerIdx + 1; r < rows.length; r++) {
           const row = rows[r];
           if (!row || row.length === 0) continue;
+          
+          // La colonna del giorno potrebbe avere "P" o "p" o essere vuota
           const cellVal = String(row[dateColIdx] ?? "").trim().toUpperCase();
 
           if (cellVal === "P") {
+            // Colonna A (indice 0) = NUMERO RIGA (da ignorare)
+            // Colonna B (indice 1) = GRADO
+            // Colonna C (indice 2) = CAT
+            // Colonna D (indice 3) = COGNOME
+            // Colonna E (indice 4) = NOME
+            // Colonna F (indice 5) = SERVIZIO
+            // Colonna G (indice 6) = GrCgnNm
+            // Colonna H (indice 7) = ENTE
+            // Colonna I (indice 8) = CELL
+            // Colonna J (indice 9) = TEL UFF
+            // Colonna K (indice 10) = E-MAIL
+            
+            const grado = String(row[1] ?? "").trim();
+            const cat = String(row[2] ?? "").trim();
             const cognome = String(row[3] ?? "").trim();
             const nome = String(row[4] ?? "").trim();
+            
             if (!cognome && !nome) continue;
 
-            people.push({
-              grado: String(row[1] ?? "").trim(), // Colonna 2 (Indice 1) = Grado
-              cat: String(row[2] ?? "").trim(),   // Colonna 3 (Indice 2) = Categoria
+            resolve({
+              grado,
+              cat,
               cognome,
               nome,
-              cell: String(row[5] ?? "").trim(),
-              tel_uff: String(row[6] ?? "").trim(),
+              servizio: String(row[5] ?? "").trim(),
+              grcgnnm: String(row[6] ?? "").trim(),
+              ente: String(row[7] ?? "").trim(),
+              cell: String(row[8] ?? "").trim(),
+              tel_uff: String(row[9] ?? "").trim(),
+              email: String(row[10] ?? "").trim(),
             });
+            return;
           }
         }
 
-        if (people.length === 0) resolve(null);
-        else resolve(people[0]);
-      } catch (err) { reject(err); }
+        resolve(null);
+      } catch (err) {
+        reject(err);
+      }
     };
     reader.readAsArrayBuffer(file);
   });
@@ -128,25 +149,30 @@ export async function readAllGuardStatsForRole(
           const row = rows[r];
           if (!row || row.length === 0) continue;
 
-          const cognome = String(row[3] ?? "").trim();
-          const nome = String(row[4] ?? "").trim();
+          const cognome = String(row[3] ?? "").trim(); // Colonna D (indice 3)
+          const nome = String(row[4] ?? "").trim();    // Colonna E (indice 4)
           if (!cognome && !nome) continue;
 
           let countP = 0;
-          for (let c = 7; c < row.length; c++) {
+          // Conta le "P" da colonna L (indice 11) in poi
+          for (let c = 11; c < row.length; c++) {
             if (String(row[c] ?? "").trim().toUpperCase() === "P") countP++;
           }
 
-          result.push({
-            cat: String(row[2] ?? "").trim(), // Colonna 3 (Indice 2) = Categoria
-            cognome,
-            nome,
-            totalGuardie: countP,
-            roleLabel,
-          });
+          if (countP > 0) {
+            result.push({
+              cat: String(row[2] ?? "").trim(), // Colonna C (indice 2)
+              cognome,
+              nome,
+              totalGuardie: countP,
+              roleLabel,
+            });
+          }
         }
         resolve(result);
-      } catch (err) { reject(err); }
+      } catch (err) {
+        reject(err);
+      }
     };
     reader.readAsArrayBuffer(file);
   });
