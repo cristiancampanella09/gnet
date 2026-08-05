@@ -27,10 +27,10 @@ function formatDate(date: string, separator: string = '-'): string {
 // ========== STILI E BORDI CENTRALIZZATI ==========
 
 const STYLES = {
-  boldCenter: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'center' } as Partial<ExcelJS.Alignment> },
-  boldLeft: { font: { bold: true }, alignment: { horizontal: 'left', vertical: 'center' } as Partial<ExcelJS.Alignment> },
-  normalLeft: { font: { bold: false }, alignment: { horizontal: 'left', vertical: 'center' } as Partial<ExcelJS.Alignment> },
-  normalCenter: { font: { bold: false }, alignment: { horizontal: 'center', vertical: 'center' } as Partial<ExcelJS.Alignment> },
+  boldCenter: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'middle' } },
+  boldLeft: { font: { bold: true }, alignment: { horizontal: 'left', vertical: 'middle' } },
+  normalLeft: { font: { bold: false }, alignment: { horizontal: 'left', vertical: 'middle' } },
+  normalCenter: { font: { bold: false }, alignment: { horizontal: 'center', vertical: 'middle' } },
 };
 
 const BORDER_MEDIUM: Partial<ExcelJS.Border> = { style: 'medium', color: { argb: 'FF000000' } };
@@ -52,7 +52,7 @@ export async function generateExcelFile(
     { width: 30 }, // A
     { width: 15 }, // B
     { width: 35 }, // C
-    { width: 25 }, // D  <-- ALLARGATA
+    { width: 25 }, // D
     { width: 35 }  // E
   ];
 
