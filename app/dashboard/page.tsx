@@ -5,9 +5,7 @@ import { getSigners, saveSigners } from "@/lib/storage";
 import { changePassword } from "@/lib/auth";
 import {
   readPersonForRole,
-  readAllGuardStatsForRole,
   Person,
-  GuardStats,
 } from "@/lib/excel-reader";
 import {
   buildAssignments,
@@ -135,7 +133,7 @@ export default function DashboardPage() {
   const [newSigner, setNewSigner] = useState("");
   
   // Data servizio
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
   
   // Assegnazioni
   const [assignments, setAssignments] = useState<Assignments | null>(null);
@@ -386,9 +384,15 @@ export default function DashboardPage() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // ========== CARICAMENTO ASSEGNAZIONI ==========
-  const loadAssignments = async () => {
-    if (!selectedDate || !selectedYear || !selectedMonth) return;
+  // ========== CARICAMENTO ASSEGNAZIONI (CORRETTO) ==========
+  const loadAssignments = useCallback(async (dateOverride?: string) => {
+    const dateToUse = dateOverride || selectedDate;
+    console.log(`🔍 loadAssignments: data="${dateToUse}", anno="${selectedYear}", mese="${selectedMonth}"`);
+    
+    if (!dateToUse || !selectedYear || !selectedMonth) {
+      console.warn('⚠️ loadAssignments: dati mancanti');
+      return;
+    }
     
     setLoadingAssignments(true);
     
@@ -418,7 +422,8 @@ export default function DashboardPage() {
             const fileContent = await readFileContent(fileHandle);
             const file = new File([fileContent], fileName);
             
-            const person = await readPersonForRole(file, selectedDate);
+            console.log(`📂 Lettura ${ROLE_LABELS[role]} con data: ${dateToUse}`);
+            const person = await readPersonForRole(file, dateToUse);
             rolePeople[role] = person;
             
           } catch (err) {
@@ -438,7 +443,7 @@ export default function DashboardPage() {
       setTimeout(() => setMessage(null), 5000);
     }
     setLoadingAssignments(false);
-  };
+  }, [selectedDate, selectedYear, selectedMonth]);
 
   // ========== FIRMATARI ==========
   const handleAddSigner = () => {
@@ -485,11 +490,13 @@ export default function DashboardPage() {
     setTimeout(() => { setShowSettings(false); setPwMsg(""); }, 1500);
   }
 
-  // ========== DATA SERVIZIO ==========
+  // ========== DATA SERVIZIO (CORRETTO) ==========
   const handleDateChange = async (date: string) => {
+    console.log(`📅 handleDateChange: ${date}`);
     setSelectedDate(date);
     if (date && selectedYear && selectedMonth) {
-      await loadAssignments();
+      console.log(`🔄 Carico assegnazioni per: ${date}`);
+      await loadAssignments(date);
     }
   };
 
@@ -899,6 +906,17 @@ export default function DashboardPage() {
                 </div>
                 {loadingAssignments && (
                   <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "12px" }}>⏳ Caricamento...</span>
+                )}
+                {selectedDate && (
+                  <span style={{ 
+                    fontSize: "11px", 
+                    color: "rgba(255,255,255,0.3)",
+                    background: "rgba(255,255,255,0.05)",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                  }}>
+                    {new Date(selectedDate).toLocaleDateString('it-IT')}
+                  </span>
                 )}
               </div>
             </div>
