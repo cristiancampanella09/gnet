@@ -26,7 +26,6 @@ function formatDate(date: string, separator: string = '-'): string {
 
 // ========== STILI E BORDI CENTRALIZZATI ==========
 
-// Aggiunto 'as const' per dire a TypeScript di usare i valori letterali esatti
 const STYLES = {
   boldCenter: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'middle' } },
   boldLeft: { font: { bold: true }, alignment: { horizontal: 'left', vertical: 'middle' } },
@@ -40,11 +39,12 @@ const NO_BORDER: Partial<ExcelJS.Borders> = {};
 
 // ========== GENERAZIONE EXCEL ==========
 
+// Cambiato il tipo di ritorno in Promise<ArrayBuffer>
 export async function generateExcelFile(
   assignments: Assignments,
   date: string,
   signer: string
-): Promise<Uint8Array> {
+): Promise<ArrayBuffer> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Servizio di Guardia');
 
@@ -208,7 +208,8 @@ export async function generateExcelFile(
 
   // ========== GENERAZIONE BUFFER ==========
   const buffer = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(buffer);
+  // Cast esplicito ad ArrayBuffer per risolvere l'incompatibilità di tipo in Next.js
+  return buffer as ArrayBuffer; 
 }
 
 // ========== DOWNLOAD EXCEL ==========
