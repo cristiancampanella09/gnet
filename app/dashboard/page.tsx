@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSigners, saveSigners } from "@/lib/storage";
 import { changePassword } from "@/lib/auth";
@@ -36,6 +36,7 @@ import {
   clearRootHandle,
   readFileContent
 } from "@/lib/file-system";
+import { downloadExcelFile } from "@/lib/excel-generator";
 
 // MESI in italiano
 const MESI_ITALIANI: Record<string, string> = {
@@ -384,7 +385,7 @@ export default function DashboardPage() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // ========== CARICAMENTO ASSEGNAZIONI (CORRETTO) ==========
+  // ========== CARICAMENTO ASSEGNAZIONI ==========
   const loadAssignments = useCallback(async (dateOverride?: string) => {
     const dateToUse = dateOverride || selectedDate;
     console.log(`🔍 loadAssignments: data="${dateToUse}", anno="${selectedYear}", mese="${selectedMonth}"`);
@@ -490,13 +491,23 @@ export default function DashboardPage() {
     setTimeout(() => { setShowSettings(false); setPwMsg(""); }, 1500);
   }
 
-  // ========== DATA SERVIZIO (CORRETTO) ==========
+  // ========== DATA SERVIZIO ==========
   const handleDateChange = async (date: string) => {
     console.log(`📅 handleDateChange: ${date}`);
     setSelectedDate(date);
     if (date && selectedYear && selectedMonth) {
       console.log(`🔄 Carico assegnazioni per: ${date}`);
       await loadAssignments(date);
+    }
+  };
+
+  // ========== GENERA EXCEL ==========
+  const handleGenerateExcel = async () => {
+    if (assignments && selectedDate && selectedSigner) {
+      console.log(`📄 Generazione Excel per: ${selectedDate} con firmatario ${selectedSigner}`);
+      downloadExcelFile(assignments, selectedDate, selectedSigner);
+    } else {
+      console.warn('⚠️ Dati mancanti per generare Excel');
     }
   };
 
@@ -1008,6 +1019,7 @@ export default function DashboardPage() {
 
             {/* Pulsante Genera */}
             <button 
+              onClick={handleGenerateExcel}
               disabled={!selectedDate || !assignments || loadingAssignments} 
               style={{
                 width: "100%", 
