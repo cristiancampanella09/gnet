@@ -26,12 +26,13 @@ function formatDate(date: string, separator: string = '-'): string {
 
 // ========== STILI E BORDI CENTRALIZZATI ==========
 
+// Aggiunto 'as const' per dire a TypeScript di usare i valori letterali esatti
 const STYLES = {
   boldCenter: { font: { bold: true }, alignment: { horizontal: 'center', vertical: 'middle' } },
   boldLeft: { font: { bold: true }, alignment: { horizontal: 'left', vertical: 'middle' } },
   normalLeft: { font: { bold: false }, alignment: { horizontal: 'left', vertical: 'middle' } },
   normalCenter: { font: { bold: false }, alignment: { horizontal: 'center', vertical: 'middle' } },
-};
+} as const;
 
 const BORDER_MEDIUM: Partial<ExcelJS.Border> = { style: 'medium', color: { argb: 'FF000000' } };
 const BORDER_THIN: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: 'FF000000' } };
