@@ -147,32 +147,50 @@ export async function generateExcelFile(
   notes.forEach((note, idx) => setCell(31 + idx, 2, note, STYLES.normalLeft));
 
   // ========== APPLICAZIONE BORDI PERSONALIZZATI ==========
-  
+  // NOTA: questa sezione è stata riscritta per rispecchiare ESATTAMENTE i bordi
+  // presenti nel file modello reale (utility.xlsx), verificati cella per cella.
+  // Regola generale osservata nel modello: il bordo SINISTRO è medium solo sulla
+  // colonna A (le altre colonne non hanno bordo sinistro); il bordo DESTRO è
+  // medium su TUTTE le colonne (funge da divisore verticale interno).
+
   const applyBorders = (r: number, c: number, borders: Partial<ExcelJS.Borders>) => {
     worksheet.getCell(r, c).border = borders;
   };
 
-  // 1. C9 e D9 con bordi
-  [3, 4].forEach(c => applyBorders(9, c, { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN }));
+  // 1. Riga 9 (intestazioni "Comprensorio ...") — bordi non uniformi come nel modello
+  applyBorders(9, 1, NO_BORDER);
+  applyBorders(9, 2, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(9, 3, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM });
+  applyBorders(9, 4, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM });
+  applyBorders(9, 5, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
 
-  // 2. A10:E10 con tutti i bordi
-  for (let c = 1; c <= 5; c++) {
-    applyBorders(10, c, {
-      top: BORDER_MEDIUM, bottom: BORDER_MEDIUM,
-      left: c === 1 ? BORDER_MEDIUM : BORDER_THIN,
-      right: c === 5 ? BORDER_MEDIUM : BORDER_THIN
-    });
-  }
+  // 2. Riga 10 (intestazione colonne tabella 1) — B10 e D10 (Telefono) senza bordo superiore
+  applyBorders(10, 1, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(10, 2, { bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(10, 3, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(10, 4, { bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(10, 5, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
 
-  // 3. Righe 11-19 (Dati tabella 1)
-  for (let r = 11; r <= 19; r++) {
+  // 3. Righe 11-18 (corpo tabella 1, bordi thin) — right sempre medium, left medium solo su col.1
+  for (let r = 11; r <= 18; r++) {
     for (let c = 1; c <= 5; c++) {
       applyBorders(r, c, {
-        top: BORDER_THIN, bottom: r === 19 ? BORDER_MEDIUM : BORDER_THIN,
-        left: c === 1 ? BORDER_MEDIUM : BORDER_THIN,
-        right: c === 5 ? BORDER_MEDIUM : BORDER_THIN
+        top: BORDER_THIN,
+        bottom: BORDER_THIN,
+        left: c === 1 ? BORDER_MEDIUM : undefined,
+        right: BORDER_MEDIUM,
       });
     }
+  }
+
+  // 3b. Riga 19 (chiusura tabella 1, bordo inferiore medium)
+  for (let c = 1; c <= 5; c++) {
+    applyBorders(19, c, {
+      top: BORDER_THIN,
+      bottom: BORDER_MEDIUM,
+      left: c === 1 ? BORDER_MEDIUM : undefined,
+      right: BORDER_MEDIUM,
+    });
   }
 
   // 4. Righe 20 e 21: NESSUN BORDO (inclusa E21)
@@ -180,26 +198,52 @@ export async function generateExcelFile(
     for (let c = 1; c <= 5; c++) applyBorders(r, c, NO_BORDER);
   }
 
-  // 5. Riga 22: A22 e B22 NESSUN BORDO. C22 e D22 con bordi. E22 NESSUN BORDO.
+  // 5. Riga 22: A22 e B22 NESSUN BORDO. C22/D22 con left medium (no right). E22 con right medium.
   applyBorders(22, 1, NO_BORDER);
   applyBorders(22, 2, NO_BORDER);
-  applyBorders(22, 3, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_THIN, right: BORDER_THIN });
-  applyBorders(22, 4, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_THIN, right: BORDER_THIN });
-  applyBorders(22, 5, NO_BORDER);
+  applyBorders(22, 3, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM });
+  applyBorders(22, 4, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM });
+  applyBorders(22, 5, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
 
-  // 6. Righe 23-28 (Dati tabella 2)
-  for (let r = 23; r <= 28; r++) {
+  // 6. Riga 23 (intestazione tabella 2) — D23 (Telefono) senza bordo superiore
+  applyBorders(23, 1, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(23, 2, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(23, 3, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(23, 4, { bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+  applyBorders(23, 5, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, right: BORDER_MEDIUM });
+
+  // 7. Riga 24 (prima riga dati tabella 2) — nessun bordo superiore (già chiuso da riga 23)
+  for (let c = 1; c <= 5; c++) {
+    applyBorders(24, c, {
+      bottom: BORDER_THIN,
+      left: c === 1 ? BORDER_MEDIUM : undefined,
+      right: BORDER_MEDIUM,
+    });
+  }
+
+  // 8. Righe 25-27 (corpo tabella 2, bordi thin)
+  for (let r = 25; r <= 27; r++) {
     for (let c = 1; c <= 5; c++) {
       applyBorders(r, c, {
-        top: r === 23 ? BORDER_MEDIUM : BORDER_THIN,
-        bottom: r === 28 ? BORDER_MEDIUM : BORDER_THIN,
-        left: c === 1 ? BORDER_MEDIUM : BORDER_THIN,
-        right: c === 5 ? BORDER_MEDIUM : BORDER_THIN
+        top: BORDER_THIN,
+        bottom: BORDER_THIN,
+        left: c === 1 ? BORDER_MEDIUM : undefined,
+        right: BORDER_MEDIUM,
       });
     }
   }
 
-  // 7. E31 con bordi (Box per la firma)
+  // 9. Riga 28 (chiusura tabella 2, bordo inferiore medium)
+  for (let c = 1; c <= 5; c++) {
+    applyBorders(28, c, {
+      top: BORDER_THIN,
+      bottom: BORDER_MEDIUM,
+      left: c === 1 ? BORDER_MEDIUM : undefined,
+      right: BORDER_MEDIUM,
+    });
+  }
+
+  // 10. E31 con bordi (Box per la firma)
   applyBorders(31, 5, { top: BORDER_MEDIUM, bottom: BORDER_MEDIUM, left: BORDER_MEDIUM, right: BORDER_MEDIUM });
 
   // ========== ALTEZZE RIGHE ==========
