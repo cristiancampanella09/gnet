@@ -1,16 +1,15 @@
 const SIGNERS_KEY = "gnet_signers";
 const PASSWORD_KEY = "gnet_password";
 
-// Sostituisci con l'hash generato per "Cristian@2009"
-const DEFAULT_PASSWORD_HASH = "$2a$10$e9ZxH8XQYjK3N5V7W2L9X.s3fJ2kL5mN8oP7qR4sT6uVwXyZ1A2B3C4D5E6"; 
+const DEFAULT_SIGNERS = ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
 
 export function getSigners(): string[] {
-  if (typeof window === "undefined") return ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+  if (typeof window === "undefined") return DEFAULT_SIGNERS;
   try {
     const data = localStorage.getItem(SIGNERS_KEY);
-    return data ? JSON.parse(data) : ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+    return data ? JSON.parse(data) : DEFAULT_SIGNERS;
   } catch {
-    return ["Comandante Rossi", "Ten. Bianchi", "Cap. Verdi"];
+    return DEFAULT_SIGNERS;
   }
 }
 

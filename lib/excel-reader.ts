@@ -13,6 +13,13 @@ export interface Person {
   email: string;
 }
 
+export interface PersonReadResult {
+  /** Prima persona trovata per il giorno (o null). */
+  person: Person | null;
+  /** Quante persone risultano di servizio quel giorno (P/X). */
+  matches: number;
+}
+
 export interface GuardStats {
   cat: string;
   cognome: string;
@@ -26,6 +33,18 @@ const MESI_IT: Record<number, string> = {
   5: "maggio", 6: "giugno", 7: "luglio", 8: "agosto",
   9: "settembre", 10: "ottobre", 11: "novembre", 12: "dicembre",
 };
+
+/** Indice colonna (0-based) -> lettera Excel (A, B, ..., Z, AA, AB, ...). */
+function columnLetter(index: number): string {
+  let n = index + 1;
+  let s = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
 
 function findSheet(workbook: XLSX.WorkBook, month: number): XLSX.WorkSheet {
   const nomeMese = MESI_IT[month];
@@ -48,75 +67,71 @@ function findDayColumnIndex(headerRow: unknown[], day: number): number {
   for (let i = 11; i < headerRow.length; i++) {
     const cell = headerRow[i];
     if (cell === undefined || cell === null) continue;
-    const cellStr = String(cell).trim();
-    if (cellStr === String(day) || cellStr === `${day}`) {
-      return i;
-    }
+    if (String(cell).trim() === String(day)) return i;
   }
-  // Fallback: L + (day - 1)
+  // Fallback: colonna L + (day - 1)
   return 10 + day;
 }
 
-export async function readPersonForRole(file: File, dateStr: string): Promise<Person | null> {
-  console.log(`📂 readPersonForRole: data="${dateStr}", file="${file.name}"`);
+export async function readPersonForRole(file: File, dateStr: string): Promise<PersonReadResult> {
+  const empty: PersonReadResult = { person: null, matches: 0 };
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
-        
+
         const dateParts = dateStr.split("-");
         if (dateParts.length !== 3) {
-          console.error(`❌ Data non valida: ${dateStr}`);
-          resolve(null);
+          console.error(`Data non valida: ${dateStr}`);
+          resolve(empty);
           return;
         }
-        
+
         const month = parseInt(dateParts[1], 10);
         const day = parseInt(dateParts[2], 10);
-        
-        console.log(`📅 Mese: ${month}, Giorno: ${day}`);
-        
+
         const sheet = findSheet(workbook, month);
         const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
         const headerIdx = findHeaderRow(rows);
         if (headerIdx === -1) {
-          console.warn('❌ Intestazione non trovata');
-          resolve(null);
+          console.warn(`${file.name}: intestazione non trovata`);
+          resolve(empty);
           return;
         }
 
         const headerRow = rows[headerIdx];
         const dateColIdx = findDayColumnIndex(headerRow, day);
-        const colLetter = String.fromCharCode(65 + dateColIdx);
-        console.log(`📌 Colonna giorno: ${colLetter} (indice ${dateColIdx})`);
 
-        if (dateColIdx >= rows[headerIdx]?.length) {
-          console.warn(`❌ Colonna ${dateColIdx} non esiste`);
-          resolve(null);
+        if (dateColIdx >= headerRow.length) {
+          console.warn(`${file.name}: colonna ${columnLetter(dateColIdx)} non esiste`);
+          resolve(empty);
           return;
         }
+
+        let first: Person | null = null;
+        let matches = 0;
 
         for (let r = headerIdx + 1; r < rows.length; r++) {
           const row = rows[r];
           if (!row || row.length === 0) continue;
-          
-          const cellVal = String(row[dateColIdx] ?? "").trim().toUpperCase();
-          
-          if (cellVal === "P" || cellVal === "X") {
-            const grado = String(row[1] ?? "").trim();
-            const cat = String(row[2] ?? "").trim();
-            const cognome = String(row[3] ?? "").trim();
-            const nome = String(row[4] ?? "").trim();
-            
-            if (!cognome && !nome) continue;
 
-            const person: Person = {
-              grado,
-              cat,
+          const cellVal = String(row[dateColIdx] ?? "").trim().toUpperCase();
+          if (cellVal !== "P" && cellVal !== "X") continue;
+
+          const cognome = String(row[3] ?? "").trim();
+          const nome = String(row[4] ?? "").trim();
+          if (!cognome && !nome) continue;
+
+          matches++;
+          if (!first) {
+            first = {
+              grado: String(row[1] ?? "").trim(),
+              cat: String(row[2] ?? "").trim(),
               cognome,
               nome,
               servizio: String(row[5] ?? "").trim(),
@@ -126,17 +141,12 @@ export async function readPersonForRole(file: File, dateStr: string): Promise<Pe
               tel_uff: String(row[9] ?? "").trim(),
               email: String(row[10] ?? "").trim(),
             };
-
-            console.log(`✅ Trovato: ${grado} ${cognome} ${nome}`);
-            resolve(person);
-            return;
           }
         }
 
-        console.warn(`❌ Nessuna "P" trovata per il giorno ${day}`);
-        resolve(null);
+        resolve({ person: first, matches });
       } catch (err) {
-        console.error('Errore lettura file:', err);
+        console.error("Errore lettura file:", err);
         reject(err);
       }
     };
@@ -151,6 +161,7 @@ export async function readAllGuardStatsForRole(
 ): Promise<GuardStats[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
