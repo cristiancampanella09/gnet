@@ -424,8 +424,8 @@ export default function DashboardPage() {
             const file = new File([fileContent], fileName);
             
             console.log(`📂 Lettura ${ROLE_LABELS[role]} con data: ${dateToUse}`);
-            const person = await readPersonForRole(file, dateToUse);
-            rolePeople[role] = person;
+            const result = await readPersonForRole(file, dateToUse);
+            rolePeople[role] = result.person;
             
           } catch (err) {
             console.error(`Errore lettura ${role}:`, err);
