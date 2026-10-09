@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSigners, saveSigners } from "@/lib/storage";
-import { changePassword } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   readPersonForRole,
   Person,
@@ -111,7 +111,7 @@ interface MonthFileState {
 export default function DashboardPage() {
   const router = useRouter();
   
-  // Auth
+  // Auth (il controllo accesso è gestito dal middleware)
   const [authChecked, setAuthChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   
@@ -150,13 +150,8 @@ export default function DashboardPage() {
   // Message
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // ========== AUTH ==========
+  // ========== INIZIALIZZAZIONE ==========
   useEffect(() => {
-    const auth = sessionStorage.getItem("gnet_auth");
-    if (!auth) {
-      router.replace("/login");
-      return;
-    }
     setAuthorized(true);
     setAuthChecked(true);
     
@@ -174,6 +169,13 @@ export default function DashboardPage() {
       setSelectedYear(savedYears[0]);
     }
   }, [router]);
+
+  // ========== LOGOUT ==========
+  const handleLogout = async () => {
+    await createClient().auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   // ========== ANNI/MESI ==========
   useEffect(() => {
@@ -426,6 +428,9 @@ export default function DashboardPage() {
             console.log(`📂 Lettura ${ROLE_LABELS[role]} con data: ${dateToUse}`);
             const result = await readPersonForRole(file, dateToUse);
             rolePeople[role] = result.person;
+            if (result.matches > 1) {
+              console.warn(`⚠️ ${ROLE_LABELS[role]}: ${result.matches} persone di servizio il ${dateToUse}, uso la prima`);
+            }
             
           } catch (err) {
             console.error(`Errore lettura ${role}:`, err);
@@ -478,12 +483,18 @@ export default function DashboardPage() {
       setPwMsg("Le password non coincidono.");
       return;
     }
-    if (newPw.length < 4) {
+    if (newPw.length < 6) {
       setPwError(true);
-      setPwMsg("Minimo 4 caratteri.");
+      setPwMsg("Minimo 6 caratteri.");
       return;
     }
-    await changePassword(newPw);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    if (error) {
+      setPwError(true);
+      setPwMsg("Errore: " + error.message);
+      return;
+    }
     setPwMsg("Password aggiornata!");
     setPwError(false);
     setNewPw("");
@@ -587,6 +598,17 @@ export default function DashboardPage() {
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
+          </button>
+          <button onClick={handleLogout} style={{
+            background: "rgba(255,255,255,0.07)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "10px",
+            padding: "8px 12px",
+            color: "rgba(255,255,255,0.6)",
+            cursor: "pointer",
+            fontSize: "13px",
+          }}>
+            Esci
           </button>
         </div>
       </nav>

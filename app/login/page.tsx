@@ -1,28 +1,51 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { verifyPassword } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
-    if (!password) return;
+    if (!email || !password) return;
     setLoading(true);
     setError("");
-    const ok = await verifyPassword(password);
-    if (ok) {
-      sessionStorage.setItem("gnet_auth", "true");
-      router.push("/dashboard");
-    } else {
-      setError("Password non valida.");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError("Credenziali non valide.");
       setLoading(false);
+      return;
     }
+    router.push("/dashboard");
+    router.refresh();
   }
+
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: "12px", fontWeight: "600",
+    color: "rgba(255,255,255,0.5)", textTransform: "uppercase",
+    letterSpacing: "0.8px", marginBottom: "8px",
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 16px",
+    boxSizing: "border-box",
+    background: "rgba(255,255,255,0.06)",
+    border: error ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "12px",
+    color: "white",
+    fontSize: "15px",
+    outline: "none",
+    transition: "border-color 0.2s",
+  };
+
+  const disabled = loading || !password || !email;
 
   return (
     <div style={{
@@ -33,7 +56,6 @@ export default function LoginPage() {
       justifyContent: "center",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif",
     }}>
-      {/* Glow top */}
       <div style={{
         position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)",
         width: "600px", height: "300px",
@@ -65,43 +87,35 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 style={{ color: "white", fontSize: "22px", fontWeight: "700", margin: 0 }}>GnET</h1>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", marginTop: "6px" }}>Inserisci la password per accedere</p>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "13px", marginTop: "6px" }}>Accedi con le tue credenziali</p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div>
-            <label style={{
-              display: "block", fontSize: "12px", fontWeight: "600",
-              color: "rgba(255,255,255,0.5)", textTransform: "uppercase",
-              letterSpacing: "0.8px", marginBottom: "8px"
-            }}>
-              Password
-            </label>
-            
-            {/* Campo Password con Toggle Visibilità */}
+            <label style={labelStyle}>Email</label>
+            <input
+              type="email"
+              placeholder="nome@esempio.it"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Password</label>
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Inserisci la password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                style={{
-                  width: "100%",
-                  padding: "14px 44px 14px 16px",
-                  boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.06)",
-                  border: error ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "12px",
-                  color: "white",
-                  fontSize: "15px",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => { if (!error) e.target.style.borderColor = "rgba(99,179,237,0.6)"; }}
-                onBlur={(e) => { if (!error) e.target.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                style={{ ...inputStyle, padding: "14px 44px 14px 16px" }}
               />
-
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -120,17 +134,15 @@ export default function LoginPage() {
                   borderRadius: "6px",
                   transition: "color 0.2s",
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.color = "rgba(255,255,255,0.8)"}
-                onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}
               >
                 {showPassword ? (
-                  /* Icona Occhio Sbarrato (Nascondi) */
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                     <line x1="1" y1="1" x2="23" y2="23" />
                   </svg>
                 ) : (
-                  /* Icona Occhio (Mostra) */
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                     <circle cx="12" cy="12" r="3" />
@@ -148,11 +160,11 @@ export default function LoginPage() {
 
           <button
             onClick={handleLogin}
-            disabled={loading || !password}
+            disabled={disabled}
             style={{
               width: "100%",
               padding: "14px",
-              background: loading || !password
+              background: disabled
                 ? "rgba(59,130,246,0.4)"
                 : "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
               border: "none",
@@ -160,7 +172,7 @@ export default function LoginPage() {
               color: "white",
               fontSize: "15px",
               fontWeight: "600",
-              cursor: loading || !password ? "not-allowed" : "pointer",
+              cursor: disabled ? "not-allowed" : "pointer",
               transition: "all 0.2s",
               letterSpacing: "0.2px",
             }}
